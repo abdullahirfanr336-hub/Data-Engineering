@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Data Extractor | Intelligence Engine</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <div class="glass-card">
+            <span class="badge">Advanced Automation</span>
+            <h1>Data Intelligence</h1>
+            <p class="subtitle">Convert car price lists into intelligent Excel sheets with logic-driven mapping</p>
+
+            <div id="drop-zone" class="drop-zone">
+                <input type="file" id="file-input" hidden accept=".pdf">
+                <div class="icon-wrapper">
+                    <span id="icon">📄</span>
+                </div>
+                <h3 id="drop-text">Drop PDF Price List</h3>
+                <p style="font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem;">or click to browse your files</p>
+            </div>
+
+            <button id="action-btn" class="btn-main" disabled>
+                <div class="loader" id="loader"></div>
+                <span id="btn-label">Process Document</span>
+            </button>
+
+            <p id="status" class="status-msg"></p>
+
+            <div id="result-area">
+                <p style="color: #10b981; font-weight: 600; margin-bottom: 1rem;">✨ Discovery Optimized</p>
+                <button id="download-btn" class="btn-main btn-download">
+                    Download Final Excel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const actionBtn = document.getElementById('action-btn');
+        const btnLabel = document.getElementById('btn-label');
+        const loader = document.getElementById('loader');
+        const status = document.getElementById('status');
+        const resultArea = document.getElementById('result-area');
+        const downloadBtn = document.getElementById('download-btn');
+        const dropText = document.getElementById('drop-text');
+
+        let selectedFile = null;
+        let downloadLink = null;
+
+        dropZone.onclick = () => fileInput.click();
+
+        fileInput.onchange = (e) => handleFile(e.target.files[0]);
+
+        function handleFile(file) {
+            if (file && file.type === 'application/pdf') {
+                selectedFile = file;
+                dropText.textContent = file.name;
+                dropZone.classList.add('active');
+                actionBtn.disabled = false;
+                resultArea.style.display = 'none';
+                status.textContent = "Ready to analyze.";
+            }
+        }
+
+        // Drag events
+        ['dragenter', 'dragover'].forEach(e => {
+            dropZone.addEventListener(e, (ev) => {
+                ev.preventDefault();
+                dropZone.classList.add('active');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(e => {
+            dropZone.addEventListener(e, (ev) => {
+                ev.preventDefault();
+                dropZone.classList.remove('active');
+                if (e === 'drop') handleFile(ev.dataTransfer.files[0]);
+            });
+        });
+
+        actionBtn.onclick = async () => {
+            if (!selectedFile) return;
+
+            actionBtn.disabled = true;
+            loader.style.display = 'block';
+            btnLabel.textContent = "Processing...";
+            status.textContent = "Extracting tabular data and dots...";
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                const res = await fetch('/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+
+                if (data.success) {
+                    status.textContent = "";
+                    resultArea.style.display = 'block';
+                    downloadLink = data.download_url;
+                } else {
+                    throw new Error(data.detail || "Processing logic failed");
+                }
+            } catch (err) {
+                status.textContent = `System Error: ${err.message}`;
+                status.style.color = "#f87171";
+            } finally {
+                loader.style.display = 'none';
+                btnLabel.textContent = "Process Document";
+                actionBtn.disabled = false;
+            }
+        }
+
+        downloadBtn.onclick = () => {
+            if (downloadLink) window.location.href = downloadLink;
+        }
+    </script>
+</body>
+
+</html>
